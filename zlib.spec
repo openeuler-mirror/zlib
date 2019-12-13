@@ -1,6 +1,6 @@
 Name:             zlib
 Version:          1.2.11
-Release:          15
+Release:          16
 Summary:          A lossless data-compression library
 License:          zlib and Boost
 URL:              http://www.zlib.net
@@ -13,6 +13,7 @@ Patch0:           zlib-1.2.5-minizip-fixuncrypt.patch
 Patch1:           0001-Neon-Optimized-hash-chain-rebase.patch
 Patch2:           0002-Porting-optimized-longest_match.patch
 Patch3:           0003-arm64-specific-build-patch.patch
+Patch4:           0004-zlib-Optimize-CRC32.patch
 %endif
 
 BuildRequires:    automake, autoconf, libtool
@@ -62,6 +63,7 @@ This package contains the development-related content related to minizip.
 export CFLAGS="$RPM_OPT_FLAGS"
 %ifarch aarch64
 CFLAGS+=" -DARM_NEON -O3"
+CFLAGS+=" -march=armv8-a+crc"
 %endif
 
 ./configure --libdir=%{_libdir} --includedir=%{_includedir} --prefix=%{_prefix}
@@ -113,5 +115,7 @@ make test
 %{_libdir}/pkgconfig/minizip.pc
 
 %changelog
+* Tue Dec 3 2019 liqiang <liqiang64@huawei.com> - 1.2.11-16
+- Optimize CRC32 by NEON
 * Thu Sep 5 2019 dongjian <dongjian13@huawei.com> - 1.2.11-15
 - Rebuild the zlib and fix description
