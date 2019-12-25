@@ -1,0 +1,30 @@
+From fbc28a919107bb6fbdceb2d3dfe610ddcbc5ac89 Mon Sep 17 00:00:00 2001
+From: fangyufa <fangyufa1@huawei.com>
+Date: Tue, 3 Dec 2019 15:42:06 +0800
+Subject: [PATCH] zlib: fix undefined buffer detected by oss-fuzz
+
+this patch fixes a use of uninitialized value discovered by one of the
+fuzzers of the oss-fuzz project:
+https://github.com/google/oss-fuzz/blob/master/projects/zlib/example_dict_fuzzer.c
+clear out s->prev buffer to avoid undefined behavior
+
+signed-off-by: fangyufa <fangyufa1@huawei.com>
+---
+ zlib-1.2.11/deflate.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/deflate.c b/deflate.c
+index 4c42259..a03bef2 100644
+--- a/deflate.c
++++ b/deflate.c
+@@ -329,6 +329,7 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
+ 
+     s->window = (Bytef *) ZALLOC(strm, s->w_size, 2*sizeof(Byte));
+     s->prev   = (Posf *)  ZALLOC(strm, s->w_size, sizeof(Pos));
++    memset(s->prev, 0, s->w_size*sizeof(Pos));
+     s->head   = (Posf *)  ZALLOC(strm, s->hash_size, sizeof(Pos));
+ 
+     s->high_water = 0;      /* nothing written to s->window yet */
+-- 
+2.19.1
+

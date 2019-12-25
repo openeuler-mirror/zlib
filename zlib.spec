@@ -1,6 +1,6 @@
 Name:             zlib
 Version:          1.2.11
-Release:          16
+Release:          17
 Summary:          A lossless data-compression library
 License:          zlib and Boost
 URL:              http://www.zlib.net
@@ -15,6 +15,8 @@ Patch2:           0002-Porting-optimized-longest_match.patch
 Patch3:           0003-arm64-specific-build-patch.patch
 Patch4:           0004-zlib-Optimize-CRC32.patch
 %endif
+
+Patch6000:        fix-undefined-buffer-detected-by-oss-fuzz.patch
 
 BuildRequires:    automake, autoconf, libtool
 
@@ -115,7 +117,11 @@ make test
 %{_libdir}/pkgconfig/minizip.pc
 
 %changelog
+* Sat Dec 21 2019 openEuler Buildteam <buildteam@openeuler.org> - 1.2.11-17
+- Fix undefined buffer detected by oss-fuzz
+
 * Tue Dec 3 2019 liqiang <liqiang64@huawei.com> - 1.2.11-16
 - Optimize CRC32 by NEON
+
 * Thu Sep 5 2019 dongjian <dongjian13@huawei.com> - 1.2.11-15
 - Rebuild the zlib and fix description
