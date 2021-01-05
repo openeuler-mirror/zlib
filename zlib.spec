@@ -1,6 +1,6 @@
 Name:             zlib
 Version:          1.2.11
-Release:          17
+Release:          18
 Summary:          A lossless data-compression library
 License:          zlib and Boost
 URL:              http://www.zlib.net
@@ -14,6 +14,7 @@ Patch1:           0001-Neon-Optimized-hash-chain-rebase.patch
 Patch2:           0002-Porting-optimized-longest_match.patch
 Patch3:           0003-arm64-specific-build-patch.patch
 Patch4:           0004-zlib-Optimize-CRC32.patch
+Patch5:           zlib-1.2.11-SIMD.patch
 %endif
 
 Patch6000:        fix-undefined-buffer-detected-by-oss-fuzz.patch
@@ -117,6 +118,9 @@ make test
 %{_libdir}/pkgconfig/minizip.pc
 
 %changelog
+* Mon Sep 14 2020 noah <hedongbo@huawei.com> - 1.2.11-18
+- add zlib-1.2.11-SIMD.patch
+
 * Sat Dec 21 2019 openEuler Buildteam <buildteam@openeuler.org> - 1.2.11-17
 - Fix undefined buffer detected by oss-fuzz
 
