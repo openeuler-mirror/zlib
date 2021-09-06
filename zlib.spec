@@ -1,6 +1,6 @@
 Name:             zlib
 Version:          1.2.11
-Release:          18
+Release:          19
 Summary:          A lossless data-compression library
 License:          zlib and Boost
 URL:              http://www.zlib.net
@@ -15,6 +15,7 @@ Patch2:           0002-Porting-optimized-longest_match.patch
 Patch3:           0003-arm64-specific-build-patch.patch
 Patch4:           0004-zlib-Optimize-CRC32.patch
 Patch5:           zlib-1.2.11-SIMD.patch
+Patch6:           0005-Accelerate-Adler32-using-arm64-SVE-instructions.patch
 %endif
 
 Patch6000:        fix-undefined-buffer-detected-by-oss-fuzz.patch
@@ -118,6 +119,9 @@ make test
 %{_libdir}/pkgconfig/minizip.pc
 
 %changelog
+* Thu Sep 2 2021 liqiang <liqiang64@huawei.com> - 1.2.11-19
+- Optimize Adler32 by SVE instructions.
+
 * Mon Sep 14 2020 noah <hedongbo@huawei.com> - 1.2.11-18
 - add zlib-1.2.11-SIMD.patch
 

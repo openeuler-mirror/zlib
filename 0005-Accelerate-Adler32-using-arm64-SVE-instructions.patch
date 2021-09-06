@@ -1,0 +1,175 @@
+From 41ebac8b7d7485a5396ae25ce2412cafcd03f1a2 Mon Sep 17 00:00:00 2001
+From: liqiang <liqiang64@huawei.com>
+Date: Thu, 2 Sep 2021 17:31:48 +0800
+Subject: [PATCH] Accelerate Adler32 using arm64 SVE instructions
+
+	This patch uses the SVE instruction set to rewrite the Adler32
+	algorithm (checksum algorithm in libz). By dividing the data into
+	blocks, a vector operation can complete a data block in parallel.
+
+	Measured on a Taishan 1951 machine that supports 256bit width SVE,
+	this algorithm is about 3~5 times faster than the algorithm implemented
+	in C language in libz. The wider the bit width, the better the
+	acceleration effect. Below are the results of my measured random
+	data of 1M and 10M:
+
+		[root@xxx adler32]# ./benchmark 1000000
+		Libz alg: Time used:    608 us, 1644.7 Mb/s.
+		SVE  alg: Time used:    166 us, 6024.1 Mb/s.
+
+		[root@xxx adler32]# ./benchmark 10000000
+		Libz alg: Time used:   6484 us, 1542.3 Mb/s.
+		SVE  alg: Time used:   2034 us, 4916.4 Mb/s.
+
+	On machines that support ARM64 sve instructions, this algorithm can
+	effectively accelerate adler32, thereby achieving the effect of improving
+	the performance of the basic compression algorithm libz.
+
+	In the implementation of this patch, blocks can be of any size, so the
+	algorithm can automatically adapt to SVE hardware with different bit
+	widths without modifying the code.
+
+Signed-off-by: liqiang <liqiang64@huawei.com>
+---
+ contrib/arm/adler32_sve.S | 129 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 129 insertions(+)
+ create mode 100644 contrib/arm/adler32_sve.S
+
+diff --git a/contrib/arm/adler32_sve.S b/contrib/arm/adler32_sve.S
+new file mode 100644
+index 0000000..97c5930
+--- /dev/null
++++ b/contrib/arm/adler32_sve.S
+@@ -0,0 +1,129 @@
++/******************************************************************************
++ * Copyright (c) Huawei Technologies Co., Ltd. 2018-2020. All rights reserved.
++ * iSulad licensed under the Mulan PSL v2.
++ * You can use this software according to the terms and conditions of the Mulan PSL v2.
++ * You may obtain a copy of Mulan PSL v2 at:
++ *     http://license.coscl.org.cn/MulanPSL2
++ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FIT FOR A PARTICULAR
++ * PURPOSE.
++ * See the Mulan PSL v2 for more details.
++ * Author: liqiang
++ * Create: 2020-07-13
++ * Description: Use SVE instruction to optimize adler32 algorithm.
++ * Enhancement: 2020-10-13 
++                Automatically support different SVE vector length(128~2048). 
++ ******************************************************************************/
++
++.file "adler32_sve.S"
++.text
++.align 4
++
++//The supported sve vector length range is 128~2048 by this Adler_sequence
++.Adler_sequence:
++    .short 256,255,254,253,252,251,250,249,248,247,246,245,244,243,242,241,240,239,238,237,236,235,234,233,232,231,230,229,228,227,226,225,224,223,222,221,220,219,218,217,216,215,214,213,212,211,210,209,208,207,206,205,204,203,202,201,200,199,198,197,196,195,194,193,192,191,190,189,188,187,186,185,184,183,182,181,180,179,178,177,176,175,174,173,172,171,170,169,168,167,166,165,164,163,162,161,160,159,158,157,156,155,154,153,152,151,150,149,148,147,146,145,144,143,142,141,140,139,138,137,136,135,134,133,132,131,130,129,128,127,126,125,124,123,122,121,120,119,118,117,116,115,114,113,112,111,110,109,108,107,106,105,104,103,102,101,100,99,98,97,96,95,94,93,92,91,90,89,88,87,86,85,84,83,82,81,80,79,78,77,76,75,74,73,72,71,70,69,68,67,66,65,64,63,62,61,60,59,58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43,42,41,40,39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1
++
++.global adler32_sve
++.type adler32_sve, %function
++adler32_sve:
++    // x0: unsigned long adler
++    // x1: const unsigned char *buf
++    // x2: unsigned long len
++    
++    // w10 : A = adler & 0xffff
++    // w11 : B = (adler >> 16) & 0xffff
++    // first byte A = 1, B = 0
++    and w10, w0, #0xffff
++    lsr w11, w0, #16
++    // less than and equal 63byte, jumper to normal proc
++    cmp x2, #0x3f
++    b.le Lnormal_proc
++    
++    // Get the length of the sve vector to x6.
++    mov x6, #0
++    addvl x6, x6, #1
++    adr x12, .Adler_sequence
++    ptrue p0.h
++
++    // Get the starting position of the required sequence.
++    mov x9, #256
++    sub x9, x9, x6
++    ld1h z24.h, p0/z, [x12, x9, lsl #1] // taps1 to z24.h
++    inch x9
++    ld1h z25.h, p0/z, [x12, x9, lsl #1] // taps2 to z25.h
++    // must bigger than 64byte 
++    ptrue p0.b
++    ptrue p1.h
++    mov x9, #0
++.align 4
++LBig_loop:
++    // x is SVE vector length.
++    // Bn = Bn-1 + An-1 * x + x * D1 + (x-1) * D2 + ... + 1 * Dx
++    // An = An-1 + D1 + D2 + D3 + ... + Dx
++    
++    .macro ADLER_BLOCK_32
++    ld1b z0.b, p0/z, [x1, x9]
++    
++    uaddv d20, p0, z0.b // D1 + D2 + ... + D32
++    mov x12, v20.2d[0]  // mov sum to w12
++    madd x11, x10, x6, x11 // Bn = An-1 * 32 + Bn-1
++
++    uunpklo z26.h, z0.b
++    uunpkhi z27.h, z0.b
++    mul z26.h, p1/m, z26.h, z24.h // x * D1 + (x-1) * D2 + ... + (x/2 + 1) * D(x/2)
++    mul z27.h, p1/m, z27.h, z25.h // (x/2) * D(x/2 + 1) + (x/2 - 1) * D(x/2 + 2) + ... + 1 * Dx
++
++    uaddv d21, p1, z26.h
++    uaddv d22, p1, z27.h
++    mov x13, v21.2d[0]
++    mov x14, v22.2d[0]
++
++    add x11, x13, x11
++    add x11, x14, x11     // Bn += x * D1 + (x-1) * D2 + ... + 1 * Dx
++    add x10, x12, x10     // An += D1 + D2 + ... + Dx
++    incb x9
++    .endm
++    mov x15, #4
++    ADLER_BLOCK_32
++    ADLER_BLOCK_32
++    ADLER_BLOCK_32
++    ADLER_BLOCK_32
++    
++    // calc = reg0 % 65521
++    .macro mod65521, reg0, reg1, reg2
++    mov w\reg1, #0x8071
++    mov w\reg2, #0xfff1
++    movk w\reg1, #0x8007, lsl #16
++    umull x\reg1, w\reg0, w\reg1
++    lsr x\reg1, x\reg1, #47
++    msub w\reg0, w\reg1, w\reg2, w\reg0
++    .endm
++    
++    mod65521 10, 14, 16
++    mod65521 11, 14, 16
++
++Lloop_cond:
++    mul x12, x6, x15
++    sub x2, x2, x12
++    cmp x2, x12
++    b.ge LBig_loop
++
++Lnormal_proc:
++    cmp x2, #0
++    b.eq Lret
++
++    ldrb w15, [x1, x9]
++    add x9, x9, #1
++    add x10, x15, x10
++    add x11, x10, x11
++    sub x2, x2, #1
++    b Lnormal_proc
++
++Lret:
++    mod65521 10, 14, 5
++    mod65521 11, 14, 5
++    lsl x11, x11, #16
++    orr x0, x10, x11
++    ret
++
++.size adler32_sve, .-adler32_sve
+-- 
+2.17.1
+
