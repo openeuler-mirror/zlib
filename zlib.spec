@@ -1,6 +1,6 @@
 Name:             zlib
 Version:          1.2.11
-Release:          17
+Release:          18
 Summary:          A lossless data-compression library
 License:          zlib and Boost
 URL:              http://www.zlib.net
@@ -8,13 +8,11 @@ Source0:          http://www.zlib.net/zlib-%{version}.tar.xz
 
 # Patch0 get from fedora
 Patch0:           zlib-1.2.5-minizip-fixuncrypt.patch
-%ifarch aarch64
 # Patch1 to Patch3 get from http://www.gildor.org/en/projects/zlib
 Patch1:           0001-Neon-Optimized-hash-chain-rebase.patch
 Patch2:           0002-Porting-optimized-longest_match.patch
 Patch3:           0003-arm64-specific-build-patch.patch
 Patch4:           0004-zlib-Optimize-CRC32.patch
-%endif
 
 Patch6000:        fix-undefined-buffer-detected-by-oss-fuzz.patch
 
@@ -59,7 +57,15 @@ Requires:         %{name}-devel = %{version}-%{release}
 This package contains the development-related content related to minizip.
 
 %prep
-%autosetup -p1
+%setup -n %{name}-%{version}
+%patch0 -p1
+%ifarch aarch64
+%patch1 -p1
+%patch2 -p1
+%patch3 -p1
+%patch4 -p1
+%endif
+%patch6000 -p1
 
 %build
 export CFLAGS="$RPM_OPT_FLAGS"
@@ -117,6 +123,9 @@ make test
 %{_libdir}/pkgconfig/minizip.pc
 
 %changelog
+* Sat Dec 04 2021 xu_ping <xuping33@huawei.com> - 1.2.11-18
+- Fix missing patches due to different arch
+
 * Sat Dec 21 2019 openEuler Buildteam <buildteam@openeuler.org> - 1.2.11-17
 - Fix undefined buffer detected by oss-fuzz
 
