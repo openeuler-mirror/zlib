@@ -1,6 +1,6 @@
 Name:             zlib
 Version:          1.2.11
-Release:          19
+Release:          20
 Summary:          A lossless data-compression library
 License:          zlib and Boost
 URL:              http://www.zlib.net
@@ -19,6 +19,8 @@ Patch6:           0005-Accelerate-Adler32-using-arm64-SVE-instructions.patch
 %endif
 
 Patch6000:        fix-undefined-buffer-detected-by-oss-fuzz.patch
+Patch6001:        backport-0001-CVE-2018-25032.patch
+Patch6002:        backport-0002-CVE-2018-25032.patch
 
 BuildRequires:    automake, autoconf, libtool
 
@@ -119,6 +121,9 @@ make test
 %{_libdir}/pkgconfig/minizip.pc
 
 %changelog
+* Wed Apr 13 2022 tianwei <tianwei12@h-partners.com> - 1.2.11-20
+- fix CVE-2018-25032
+
 * Thu Sep 2 2021 liqiang <liqiang64@huawei.com> - 1.2.11-19
 - Optimize Adler32 by SVE instructions.
 
