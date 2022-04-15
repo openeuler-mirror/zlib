@@ -16,19 +16,17 @@ Modify by Li Qiang.
 
 diff --git a/crc32.c b/crc32.c
 index 9580440..79ebdbd 100644
---- a/crc32.c
-+++ b/crc32.c
-@@ -29,6 +29,9 @@
+@@ -28,6 +28,9 @@
  #endif /* MAKECRCH */
  
- #include "zutil.h"      /* for STDC and FAR definitions */
+ #include "zutil.h"      /* for Z_U4, Z_U8, z_crc_t, and FAR definitions */
 +#ifdef __aarch64__
 +#include "arm_acle.h"
 +#endif
  
- /* Definitions for doing the crc four data bytes at a time. */
- #if !defined(NOBYFOUR) && defined(Z_U4)
-@@ -194,6 +197,47 @@ const z_crc_t FAR * ZEXPORT get_crc_table()
+  /*
+   A CRC of a message is computed on N braids of words in the message, where
+@@ -591,6 +594,47 @@
      return (const z_crc_t FAR *)crc_table;
  }
  
@@ -73,19 +71,19 @@ index 9580440..79ebdbd 100644
 +    return (crc_result ^ 0xffffffffL);
 +}
 +
- /* ========================================================================= */
- #define DO1 crc = crc_table[0][((int)crc ^ (*buf++)) & 0xff] ^ (crc >> 8)
- #define DO8 DO1; DO1; DO1; DO1; DO1; DO1; DO1; DO1
-@@ -204,6 +248,9 @@ unsigned long ZEXPORT crc32_z(crc, buf, len)
+ /* =========================================================================
+  * Use ARM machine instructions if available. This will compute the CRC about
+  * ten times faster than the braided calculation. This code does not check for
+@@ -615,6 +659,9 @@
      const unsigned char FAR *buf;
      z_size_t len;
  {
 +    #ifdef __aarch64__
 +    return crc32_neon(crc, buf, len);
 +    #endif
-     if (buf == Z_NULL) return 0UL;
- 
- #ifdef DYNAMIC_CRC_TABLE
+     z_crc_t val;
+     z_word_t crc1, crc2;
+     const z_word_t *word;
 -- 
 1.8.3.1
 

@@ -1,10 +1,10 @@
 Name:             zlib
-Version:          1.2.11
-Release:          20
+Version:          1.2.12
+Release:          1
 Summary:          A lossless data-compression library
 License:          zlib and Boost
 URL:              http://www.zlib.net
-Source0:          http://www.zlib.net/zlib-%{version}.tar.xz
+Source0:          http://www.zlib.net/zlib-%{version}.tar.gz
 
 # Patch0 get from fedora
 Patch0:           zlib-1.2.5-minizip-fixuncrypt.patch
@@ -19,8 +19,6 @@ Patch6:           0005-Accelerate-Adler32-using-arm64-SVE-instructions.patch
 %endif
 
 Patch6000:        fix-undefined-buffer-detected-by-oss-fuzz.patch
-Patch6001:        backport-0001-CVE-2018-25032.patch
-Patch6002:        backport-0002-CVE-2018-25032.patch
 
 BuildRequires:    automake, autoconf, libtool
 
@@ -121,6 +119,10 @@ make test
 %{_libdir}/pkgconfig/minizip.pc
 
 %changelog
+* Thu Apr 14 2022 YukariChiba <i@0x7f.cc> - 1.2.12-1
+- Upgrade version to 1.2.12
+- Merged patch in upstream: 5c44459 and 4346a16 for CVE-2018-25032
+
 * Wed Apr 13 2022 tianwei <tianwei12@h-partners.com> - 1.2.11-20
 - fix CVE-2018-25032
 
