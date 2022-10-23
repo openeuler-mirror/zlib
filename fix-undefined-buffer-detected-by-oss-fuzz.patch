@@ -17,7 +17,7 @@ diff --git a/deflate.c b/deflate.c
 index 4c42259..a03bef2 100644
 --- a/deflate.c
 +++ b/deflate.c
-@@ -329,6 +329,7 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
+@@ -314,6 +314,7 @@
  
      s->window = (Bytef *) ZALLOC(strm, s->w_size, 2*sizeof(Byte));
      s->prev   = (Posf *)  ZALLOC(strm, s->w_size, sizeof(Pos));
@@ -25,6 +25,5 @@ index 4c42259..a03bef2 100644
      s->head   = (Posf *)  ZALLOC(strm, s->hash_size, sizeof(Pos));
  
      s->high_water = 0;      /* nothing written to s->window yet */
--- 
+--
 2.19.1
-
