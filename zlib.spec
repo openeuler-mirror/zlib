@@ -1,5 +1,5 @@
 Name:             zlib
-Version:          1.2.12
+Version:          1.2.13
 Release:          1
 Summary:          A lossless data-compression library
 License:          zlib and Boost
@@ -119,6 +119,9 @@ make test
 %{_libdir}/pkgconfig/minizip.pc
 
 %changelog
+* Mon Oct 24 2022 YukariChiba <i@0x7f.cc> - 1.2.13-1
+- Upgrade version to 1.2.13
+
 * Thu Apr 14 2022 YukariChiba <i@0x7f.cc> - 1.2.12-1
 - Upgrade version to 1.2.12
 - Merged patch in upstream: 5c44459 and 4346a16 for CVE-2018-25032
